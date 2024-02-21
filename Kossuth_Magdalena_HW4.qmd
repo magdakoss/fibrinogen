@@ -1,0 +1,173 @@
+---
+title: "HW4"
+format: pdf
+editor: visual
+---
+
+## Q1. Interpret this statement in your own words using a criterion you have studied: The one-factor ANOVA 𝐹 -stat is very small, so that the chance of getting an 𝐹 -statistic value which is as small or smaller than the 𝐹 -stat obtained from the observed data is only 0.00004.
+
+p value is 0.00004 \< 0.05
+
+F=MSwithin​/MSbetween​​
+
+F-statistic value calculated from the data is significantly lower than we would be expected under the assumption that there are no differences between the group means. The probability of obtaining this small value by chance (if there were no differences between the means) is extremely low. This is evidence against the null hypothesis, supporting the conclusion that there are significant differences between the group means.
+
+## Q2. Consider the dataset tensile from the R package ACSWR. You looked at the one-factor ANOVA 𝐹 -test in HW3. Now, use suitable R functions to answer these questions.
+
+```{r}
+library(ACSWR)
+data(tensile)
+CWP <- as.factor(tensile$CWP)
+anova <- aov(tensile$Tensile_Strength ~ CWP)
+summary(lm(anova)) 
+fitted <- fitted(anova) #fitted model
+resid <- residuals(anova) #residuals
+summary(anova) #F test 
+```
+
+a\. Obtain solutions of the effects of the levels of CWP in the one-factor ANOVA model you fit for the response.
+
+The one way ANOVA is significant (p-value\< 0.05). There are significant differences in the mean tensile strength across different levels of CWP. The CWP20, CWP25, and CWP30 are statistically significant (p \< 0.05), suggesting that these levels have significant effects on the tensile strength. CWP35 does not have a significant effect as its coefficient has a high p-value.
+
+b\. Obtain point estimates, and 95% C.I. estimates of the true means 𝜇𝑖 of the five groups.
+
+```{r}
+pred_data <- expand.grid(CWP = unique(CWP))
+lsmeans <- predict(anova, newdata = pred_data, se = TRUE, interval = 'confidence')
+means <- cbind(pred_data, lsmeans$fit)
+means[order(means$CWP), ] #in order from CWP 15 to 35
+boxplot(tensile$Tensile_Strength ~ CWP, ylab = 'Tensile Strenght', xlab = 'Cotton Weight Percentage', col = 'cadetblue') #visualize means in the middle of the boxes 
+```
+
+c\. Use the Bonferroni multiple comparison procedures to conduct pairwise tests of equality of the group means. Interpret the results.
+
+Multiple comparison procedures-see which pairs of means are different
+
+```{r}
+pairwise.t.test(tensile$Tensile_Strength, tensile$CWP, p.adjust.method = 'bonf')
+```
+
+Comment: Levels 25-15, 30-15, 30-20, 35-25, 35-30 are significantly different.
+
+d\. Use the Tukey multiple comparison procedures to conduct pairwise tests of equality of the group means. Interpret the results.
+
+```{r}
+TukeyHSD(anova)
+```
+
+Comment: At the 5% level, the comparisons between levels 20-15, 25-15, 30-15, 30-20, 35-25, 35-30 are significant. Bonferroni method is more conservative than Tukey, it yields p-values greater than or equal to ones produced by Tukey’s adjustment. This explains why more levels are significant in Tukey multiple comparison (25-15).
+
+e\. Compute and interpret a suitable effect size to see whether the levels of CWP have a practically meaningful effect on tensile strength.
+
+```{r}
+library(effsize)
+cohen.d(tensile$Tensile_Strength, tensile$CWP)
+```
+
+Comment: Large effect size means the levels of CWP have a practically meaningful effect on tensile strength.
+
+## Q3. Consider the ToothGrowth dataset from the R package datasets.The response is len, the length of odontoblasts (cells responsible for tooth growth) in 60 guineapigs. Each animal received one of three dose levels of vitamin C (0.5, 1, and 2 mg/day) denoted as the factor dose (Factor A) by one of two delivery methods, orange juice or ascorbic acid (a form of vitamin C and coded as VC), denoted as the factor supp (Factor B)
+
+a\. Fit and interpret a one-factor ANOVA model relating the response len to dose (FactorA).
+
+```{r}
+library(datasets)
+library(car)
+library(carData)
+library(phia)
+data("ToothGrowth")
+dose.anova <- aov(len~dose, data=ToothGrowth)
+summary(lm(dose.anova))
+dose.fitted <- fitted(dose.anova) #fitted
+dose.res <- residuals(dose.anova) #residuals 
+#check assumptions 
+qqPlot(dose.res, main= 'Normal Q-Q Plot of Residuals') #normality 
+shapiro.test(dose.res)
+boxplot(len~dose, data = ToothGrowth, ylab = 'Tooth lenght', xlab = 'Vit C Dose (mg/day)', col= 'gold', main = 'Factor A Affect on Length') #equal variances 
+bartlett.test(len~dose, data = ToothGrowth)
+#F test
+summary(dose.anova)
+```
+
+b\. Fit and interpret a one-factor ANOVA model relating the response len to supp (FactorB).
+
+```{r}
+supp.anova <- aov(len~supp, data=ToothGrowth)
+summary(lm(supp.anova))
+supp.fitted <- fitted(supp.anova) #fitted
+supp.res <- residuals(supp.anova) #residuals 
+#check assumptions 
+qqPlot(supp.res, main= 'Normal Q-Q Plot of Residuals') #normality 
+shapiro.test(supp.res)
+boxplot(len~supp, data = ToothGrowth, ylab = 'Tooth length', xlab = 'Supplement Type', col = c('orange', 'gold'), main= 'Factor B Affect on Length') #equal variances 
+bartlett.test(len~supp, data = ToothGrowth)
+#F test
+summary(supp.anova)
+```
+
+c\. Fit and interpret an additive two-factor ANOVA model relating the response len to dose(Factor A) and supp (Factor B).
+
+```{r}
+#Differences in len among levels of factorA and factorB independently of each other
+factorA <- as.factor(ToothGrowth$dose)
+factorB <- as.factor(ToothGrowth$supp)
+panel1 <- lm(len~ factorA+factorB, data=ToothGrowth) #additive
+summary(aov(panel1)) #ANOVA table 
+(criticalA <- qf(0.95, 2, 56))
+(criticalB <- qf(0.95, 1, 56))
+plot(interactionMeans(panel1))
+```
+
+Comment: P-values \<0.05, both factors have a significant effect on the length.
+
+PLOT
+
+Top left: Overall difference in length of odontoblasts for 3 different doses of vitamin C. Higher dose leads to longer odontoblasts.
+
+Top right: Change in lengths of odontoblasts for two method of delivery (orange juice, ascorbic acid) . Longest cells with OJ and 2mg/day.
+
+Bottom left: Difference between doses, longest with OJ and 2mg/day
+
+Bottom right: Overall difference between methods of delivery.
+
+d\. Fit and interpret a two-factor ANOVA model with interaction relating the response lento dose (Factor A) and supp (Factor B).
+
+```{r}
+#also tests if the effect of one factor depends on the level of the other factor
+panel2 <- lm(len~ factorA*factorB, data=ToothGrowth) #interactive 
+#interaction effects?
+summary(aov(panel2))
+qf(0.95, 108.3, 712.1) #critical point  ???????
+plot(interactionMeans(panel2))
+```
+
+Comment : HAB: 4.107 \> 1.257 and p-value\<0.05. Reject null, there is a significant interaction effect between some levels of dose and some levels of supp
+
+HB: 15.572 \> 1.257 and p-value\<0.05. Reject null,
+
+HA: 92v\>1.257 and p-value\<0.05. Reject null,
+
+e\. Summarize what you learned from the analyses in (a) - (d).
+
+```{r}
+
+```
+
+## Q4. Choose an application domain that interests you. Find/download an interesting data set in this domain which lends to analysis using one-factor or two-factor ANOVA analysis. Carry out a comprehensive analysis (testing assumptions, testing a suitable hypothesis, estimating effects etc.). Summarize as a report. You can share this on Discussion Board, and include on your Github page.
+
+```{r}
+library(tools)
+library(HSAUR)
+library(car)
+data(plasma)
+fibrinogen <- cut(plasma$fibrinogen, breaks=c(0, 2.5, 3.5, 6), labels=c("2-2.5", "2.5-3.5","3.5-6"), include.lowest=TRUE) #divide into 3 subgroups based on fib 
+fibrinogen <- as.factor(fibrinogen)
+globulin <- as.numeric(plasma$globulin)
+anovafib <- aov(plasma$globulin ~ fibrinogen)
+fib_res <- residuals(anovafib)
+shapiro.test(fib_res) #normal
+boxplot(globulin~fibrinogen, col = c('lightblue', 'cadetblue3', 'cadetblue'))
+spreadLevelPlot(globulin, by = fibrinogen) #??
+leveneTest(globulin ~fibrinogen)
+summary(anovafib)
+```
